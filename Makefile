@@ -78,7 +78,7 @@ out/subleq: tools/subleq.c
 out/tm: tools/tm.c
 	$(CC) $(CFLAGS) $< -o $@
 
-out/ram: ramulator/main.rs
+out/ram: ram-machine/main.rs
 	rustc -O $< -o $@
 
 out/whirl: tools/whirl.cc

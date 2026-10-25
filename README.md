@@ -6,7 +6,8 @@ Due to memory addressation quirks, modifications to the 8cc compiler were made t
 backends incompatible. Additionally, instructions such as mul and div were added to take advantage of the RAM machine's
 instruction set and thus, increase performance.
 
-To compile ELVM:
+To compile ELVM, clone [a RAM machine](https://github.com/piotrbadelek/uwr-ram-machine) to ram-machine, or edit makefile
+on #81 to use your preferred ram machine. Then run:
 
 ```bash
 make build
