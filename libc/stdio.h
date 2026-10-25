@@ -7,6 +7,9 @@
 #include <string.h>
 
 #define EOF -1
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 int getchar(void);
 int putchar(int c);
@@ -38,24 +41,82 @@ int vsnprintf(char* buf, size_t size, const char* fmt, va_list ap) {
       continue;
     }
 
-    char cur_buf[32];
+    int zero_pad = 0;
+    int left_align = 0;
+    int width = 0;
+    int prec = -1;
+    int in_prec = 0;
+
+    for (;;) {
+      char c = *++inp;
+      if (c == '-') {
+        left_align = 1;
+      } else if (c == '0' && !in_prec && width == 0) {
+        zero_pad = 1;
+      } else if (c == '.') {
+        in_prec = 1;
+        prec = 0;
+      } else if (c >= '0' && c <= '9') {
+        if (in_prec) {
+          prec = prec * 10 + (c - '0');
+        } else {
+          width = width * 10 + (c - '0');
+        }
+      } else if (c == 'l' || c == 'h' || c == ' ' || c == '+') {
+        // ignore modifier
+      } else {
+        break;
+      }
+    }
+
+    char cur_buf[64];
     char* cur_p;
- retry:
-    switch (*++inp) {
-      case 'l':
-        goto retry;
+    switch (*inp) {
       case 'd':
-      case 'u':
+      case 'i':
+      case 'u': {
         cur_p = stringify_int(va_arg(ap, long), cur_buf + sizeof(cur_buf) - 1);
+        int is_neg = 0;
+        if (*cur_p == '-') {
+          is_neg = 1;
+          cur_p++;
+        }
+        int digits = strlen(cur_p);
+        int target = digits;
+        if (prec > target) target = prec;
+        if (zero_pad && !left_align) {
+          int z_target = width - (is_neg ? 1 : 0);
+          if (z_target > target) target = z_target;
+        }
+        while (digits < target && cur_p > cur_buf + 1) {
+          *--cur_p = '0';
+          digits++;
+        }
+        if (is_neg) {
+          *--cur_p = '-';
+        }
         break;
+      }
+      case 'p':
       case 'x':
+      case 'X': {
         cur_p = stringify_hex(va_arg(ap, long), cur_buf + sizeof(cur_buf) - 1);
+        int hex_digits = strlen(cur_p);
+        int target = hex_digits;
+        if (prec > target) target = prec;
+        if (zero_pad && !left_align && width > target) target = width;
+        while (hex_digits < target && cur_p > cur_buf + 1) {
+          *--cur_p = '0';
+          hex_digits++;
+        }
         break;
+      }
       case 's':
         cur_p = va_arg(ap, char*);
+        if (!cur_p) cur_p = "(null)";
         break;
       case 'c':
-        cur_buf[0] = va_arg(ap, char);
+        cur_buf[0] = va_arg(ap, int);
         cur_buf[1] = 0;
         cur_p = cur_buf;
         break;
@@ -64,26 +125,60 @@ int vsnprintf(char* buf, size_t size, const char* fmt, va_list ap) {
         cur_buf[1] = 0;
         cur_p = cur_buf;
         break;
+      case 'f':
+        (void)va_arg(ap, double);
+        cur_buf[0] = '0';
+        cur_buf[1] = 0;
+        cur_p = cur_buf;
+        break;
       default:
-        print_int(*inp);
-        print_str(" in ");
-        print_str(fmt);
-        print_str(": unknown format!\n");
-        exit(1);
+        cur_buf[0] = *inp;
+        cur_buf[1] = 0;
+        cur_p = cur_buf;
+        break;
     }
 
     size_t len = strlen(cur_p);
-    if (!is_overlow) {
-      if (off + len >= size) {
-        is_overlow = 1;
-        buf[off] = 0;
-      } else {
-        strcpy(buf + off, cur_p);
+    if (prec >= 0 && (*inp == 's')) {
+      if (len > (size_t)prec) len = prec;
+    }
+    int pad = (int)width - (int)len;
+    if (pad < 0) pad = 0;
+
+    if (!left_align && pad > 0) {
+      for (int k = 0; k < pad; k++) {
+        if (!is_overlow) {
+          if (off + 1 >= size) { is_overlow = 1; buf[off] = 0; }
+          else { buf[off] = ' '; }
+        }
+        off++;
       }
     }
-    off += len;
+
+    for (size_t k = 0; k < len; k++) {
+      if (!is_overlow) {
+        if (off + 1 >= size) { is_overlow = 1; buf[off] = 0; }
+        else { buf[off] = cur_p[k]; }
+      }
+      off++;
+    }
+
+    if (left_align && pad > 0) {
+      for (int k = 0; k < pad; k++) {
+        if (!is_overlow) {
+          if (off + 1 >= size) { is_overlow = 1; buf[off] = 0; }
+          else { buf[off] = ' '; }
+        }
+        off++;
+      }
+    }
   }
-  buf[off] = 0;
+  if (size > 0) {
+    if (off < size)
+      buf[off] = 0;
+    else
+      buf[size - 1] = 0;
+  }
   return off;
 }
 

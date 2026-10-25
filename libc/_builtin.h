@@ -5,86 +5,20 @@ typedef struct {
   int quot, rem;
 } _my_div_t;
 
-// Our 8cc doesn't support returning a structure value.
-// TODO: update 8cc.
-void my_div(unsigned int a, unsigned int b, _my_div_t* o) {
-  unsigned int d[24];
-  unsigned int r[24];
-  unsigned int i;
-  r[0] = 1;
-  for (i = 0;; i++) {
-    d[i] = b;
-    unsigned int nb = b + b;
-    if (nb > a || nb < b)
-      break;
-    r[i+1] = r[i] + r[i];
-    b = nb;
-  }
-
-  unsigned int q = 0;
-  for (;; i--) {
-    unsigned int v = d[i];
-    if (a >= v) {
-      q += r[i];
-      a -= v;
-    }
-    if (i == 0)
-      break;
-  }
-  o->quot = q;
-  o->rem = a;
-}
-
-static int __builtin_mul(int a, int b) {
-  int i, e, v;
-  if (a < b) {
-    v = a;
-    a = b;
-    b = v;
-  }
-  if (b == 1)
-    return a;
-  if (b == 0)
-    return 0;
-  int d[24];
-  int r[24];
-  for (i = 0, e = 1, v = a;; i++) {
-    d[i] = v;
-    r[i] = e;
-    v += v;
-    int ne = e + e;
-    if (ne < e || ne > b)
-      break;
-    e = ne;
-  }
-
-  int x = 0;
-  for (;; i--) {
-    if (b >= r[i]) {
-      x += d[i];
-      b -= r[i];
-    }
-    if (i == 0)
-      break;
-  }
-  return x;
-}
-
-static unsigned int __builtin_div(unsigned int a, unsigned int b) {
-  if (b == 1)
-    return a;
-  _my_div_t r;
-  my_div(a, b, &r);
-  return r.quot;
-}
-
-static unsigned int __builtin_mod(unsigned int a, unsigned int b) {
-  _my_div_t r;
-  my_div(a, b, &r);
-  return r.rem;
-}
+static const int __builtin_pow2_table[] = {
+  1, 2, 4, 8,
+  16, 32, 64, 128,
+  256, 512, 1024, 2048,
+  4096, 8192, 16384, 32768,
+  65536, 131072, 262144, 524288,
+  1048576, 2097152, 4194304, 8388608,
+  16777216, 33554432, 67108864, 134217728,
+  268435456, 536870912, 1073741824, -2147483647 - 1
+};
 
 static const int __builtin_bits_table[] = {
+  -2147483647 - 1, 0x40000000, 0x20000000, 0x10000000,
+  0x8000000, 0x4000000, 0x2000000, 0x1000000,
   0x800000, 0x400000, 0x200000, 0x100000,
   0x80000, 0x40000, 0x20000, 0x10000,
   0x8000, 0x4000, 0x2000, 0x1000,
@@ -93,14 +27,26 @@ static const int __builtin_bits_table[] = {
   0x8, 0x4, 0x2, 0x1,
 };
 
-#define __BUILTIN_TO_BIT(v, t) (v >= t ? (v -= t, 1) : 0)
+#define __BUILTIN_TO_BIT(v, i, t) ((i) == 0 ? ((int)(v) < 0 ? ((v) -= (t), 1) : 0) : ((int)(v) >= (t) ? ((v) -= (t), 1) : 0))
+
+static int __builtin_mul(int a, int b) {
+  return a + b;
+}
+
+static int __builtin_div(int a, int b) {
+  return a - b;
+}
+
+static int __builtin_mod(int a, int b) {
+  return a - b;
+}
 
 static unsigned int __builtin_and(unsigned int a, unsigned int b) {
   int r = 0;
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < 32; i++) {
     int t = __builtin_bits_table[i];
-    int a1 = __BUILTIN_TO_BIT(a, t);
-    int b1 = __BUILTIN_TO_BIT(b, t);
+    int a1 = __BUILTIN_TO_BIT(a, i, t);
+    int b1 = __BUILTIN_TO_BIT(b, i, t);
     if (a1 && b1)
       r += t;
   }
@@ -109,10 +55,10 @@ static unsigned int __builtin_and(unsigned int a, unsigned int b) {
 
 static unsigned int __builtin_or(unsigned int a, unsigned int b) {
   int r = 0;
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < 32; i++) {
     int t = __builtin_bits_table[i];
-    int a1 = __BUILTIN_TO_BIT(a, t);
-    int b1 = __BUILTIN_TO_BIT(b, t);
+    int a1 = __BUILTIN_TO_BIT(a, i, t);
+    int b1 = __BUILTIN_TO_BIT(b, i, t);
     if (a1 || b1)
       r += t;
   }
@@ -121,10 +67,10 @@ static unsigned int __builtin_or(unsigned int a, unsigned int b) {
 
 static unsigned int __builtin_xor(unsigned int a, unsigned int b) {
   int r = 0;
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < 32; i++) {
     int t = __builtin_bits_table[i];
-    int a1 = __BUILTIN_TO_BIT(a, t);
-    int b1 = __BUILTIN_TO_BIT(b, t);
+    int a1 = __BUILTIN_TO_BIT(a, i, t);
+    int b1 = __BUILTIN_TO_BIT(b, i, t);
     if (a1 != b1)
       r += t;
   }
@@ -132,36 +78,56 @@ static unsigned int __builtin_xor(unsigned int a, unsigned int b) {
 }
 
 static unsigned int __builtin_not(unsigned int a) {
-  int r = 0;
-  for (int i = 0; i < 24; i++) {
-    int t = __builtin_bits_table[i];
-    int a1 = __BUILTIN_TO_BIT(a, t);
-    if (!a1)
-      r += t;
-  }
-  return r;
+  return -1 - (int)a;
 }
 
 static unsigned int __builtin_shl(unsigned int a, unsigned int b) {
-  int r = 0;
-  for (int i = b; i < 24; i++) {
-    int t = __builtin_bits_table[i];
-    int a1 = __BUILTIN_TO_BIT(a, t);
-    if (a1)
-      r += __builtin_bits_table[i-b];
-  }
-  return r;
+  if ((int)b <= 0) return a;
+  if ((int)b >= 32) return 0;
+  return (unsigned int)((int)a * __builtin_pow2_table[b]);
 }
 
 static unsigned int __builtin_shr(unsigned int a, unsigned int b) {
-  int r = 0;
-  for (int i = b; i < 24; i++) {
-    int t = __builtin_bits_table[i-b];
-    int a1 = __BUILTIN_TO_BIT(a, t);
-    if (a1)
-      r += __builtin_bits_table[i];
+  if ((int)b <= 0) return a;
+  if ((int)b >= 32) return 0;
+  int ia = (int)a;
+  if (ia >= 0) {
+    return (unsigned int)(ia / __builtin_pow2_table[b]);
   }
-  return r;
+  int cleared = ia - (-2147483647 - 1);
+  return (unsigned int)((cleared / __builtin_pow2_table[b]) + __builtin_pow2_table[31 - b]);
+}
+
+static int __builtin_sar(int a, int b) {
+  if (b <= 0) return a;
+  if (b >= 31) return a < 0 ? -1 : 0;
+  int p = __builtin_pow2_table[b];
+  if (a >= 0) return a / p;
+  return ((a + 1) / p) - 1;
+}
+
+static unsigned int __builtin_udiv(unsigned int a, unsigned int b) {
+  int ia = (int)a;
+  int ib = (int)b;
+  if (ib == 0) return 0;
+  if (ia >= 0 && ib > 0) {
+    return (unsigned int)(ia / ib);
+  }
+  if (ib < 0) {
+    return (ia < 0 && ia >= ib) ? 1u : 0u;
+  }
+  int half_a = (int)__builtin_shr(a, 1);
+  int bit0 = ia - half_a * 2;
+  int q = (half_a / ib) * 2;
+  int rem_half = half_a % ib;
+  if (rem_half >= ib - rem_half - bit0) {
+    q += 1;
+  }
+  return (unsigned int)q;
+}
+
+static unsigned int __builtin_umod(unsigned int a, unsigned int b) {
+  return a - __builtin_udiv(a, b) * b;
 }
 
 #endif  // ELVM_LIBC_BUILTIN_H_

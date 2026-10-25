@@ -124,7 +124,7 @@ static void read_while_ident(Parser* p, char* buf, int len) {
 
 static int read_int(Parser* p, int c) {
   bool is_minus = false;
-  int r = 0;
+  long long r = 0;
   if (c == '-') {
     is_minus = true;
     c = ir_getc(p);
@@ -137,7 +137,7 @@ static int read_int(Parser* p, int c) {
     c = ir_getc(p);
   }
   ir_ungetc(p, c);
-  return is_minus ? -r : r;
+  return (int)(is_minus ? -r : r);
 }
 
 static DataPrivate* add_data(Parser* p) {
@@ -203,6 +203,12 @@ static Op get_op(Parser* p, const char* buf) {
     return ADD;
   } else if (!strcmp(buf, "sub")) {
     return SUB;
+  } else if (!strcmp(buf, "mul")) {
+    return MUL;
+  } else if (!strcmp(buf, "div")) {
+    return DIV;
+  } else if (!strcmp(buf, "mod")) {
+    return MOD;
   } else if (!strcmp(buf, "load")) {
     return LOAD;
   } else if (!strcmp(buf, "store")) {
@@ -358,6 +364,8 @@ static void parse_line(Parser* p, int c) {
     argc = 2;
   else if (op == DUMP)
     argc = 0;
+  else if (op >= MUL && op <= MOD)
+    argc = 2;
   else if (op == (Op)LONG)
     argc = 1;
   else if (op == (Op)DATA) {
@@ -448,6 +456,9 @@ static void parse_line(Parser* p, int c) {
     case MOV:
     case ADD:
     case SUB:
+    case MUL:
+    case DIV:
+    case MOD:
     case EQ:
     case NE:
     case LT:
@@ -535,13 +546,16 @@ static void parse_eir(Parser* p) {
   p->data = data_root.next;
 }
 
+static int g_num_undef = 0;
+
 static void resolve(Value* v, Table* symtab) {
   if (v->type != (ValueType)REF)
     return;
   const char* name = (const char*)v->tmp;
   if (!table_get(symtab, name, (void*)&v->imm)) {
     fprintf(stderr, "undefined sym: %s\n", name);
-    exit(1);
+    g_num_undef++;
+    return;
   }
   //fprintf(stderr, "resolved: %s %d\n", name, v->imm);
   v->type = IMM;
@@ -560,6 +574,11 @@ static void resolve_syms(Parser* p) {
     resolve(&inst->src, p->symtab);
     resolve(&inst->jmp, p->symtab);
   }
+
+  if (g_num_undef > 0) {
+    fprintf(stderr, "Total undefined symbols: %d\n", g_num_undef);
+    exit(1);
+  }
 }
 
 Module* load_eir_impl(const char* filename, FILE* fp) {
@@ -569,6 +588,14 @@ Module* load_eir_impl(const char* filename, FILE* fp) {
   };
   parse_eir(&parser);
   resolve_syms(&parser);
+
+  FILE *sym_fp = fopen("build_odra/symbols.txt", "w");
+  if (sym_fp) {
+    for (Table *t = parser.symtab; t; t = t->next) {
+      fprintf(sym_fp, "%ld %s\n", (long)t->value, t->key);
+    }
+    fclose(sym_fp);
+  }
 
   Module* m = malloc(sizeof(Module));
   m->text = parser.text;
@@ -623,6 +650,9 @@ void dump_inst_fp(Inst* inst, FILE* fp) {
     case MOV:
     case ADD:
     case SUB:
+    case MUL:
+    case DIV:
+    case MOD:
     case LOAD:
     case STORE:
     case EQ:

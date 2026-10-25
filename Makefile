@@ -1,4 +1,4 @@
-COMMONFLAGS := -W -Wall -W -Werror -MMD -MP -O -g -Wno-missing-field-initializers
+COMMONFLAGS := -W -Wall -W -Werror -MMD -MP -O -g -Wno-missing-field-initializers -Wno-switch -Wno-sign-compare
 CFLAGS := -std=gnu99 $(COMMONFLAGS) -Wno-missing-field-initializers
 CXXFLAGS := -std=c++11 $(COMMONFLAGS)
 
@@ -78,6 +78,9 @@ out/subleq: tools/subleq.c
 out/tm: tools/tm.c
 	$(CC) $(CFLAGS) $< -o $@
 
+out/ram: ramulator/main.rs
+	rustc -O $< -o $@
+
 out/whirl: tools/whirl.cc
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -137,6 +140,7 @@ ELC_SRCS := \
 	lol.c \
 	mcfunction.c \
 	oct.c \
+	odra.c \
 	php.c \
 	piet.c \
 	pietasm.c \
@@ -482,6 +486,14 @@ RUNNER := out/tm -b
 TEST_FILTER := out/24_cmp.c.eir.tm out/24_cmp2.c.eir.tm out/24_muldiv.c.eir.tm out/bitops.c.eir.tm out/copy_struct.c.eir.tm out/eof.c.eir.tm out/fizzbuzz.c.eir.tm out/fizzbuzz_fast.c.eir.tm out/global_struct_ref.c.eir.tm out/lisp.c.eir.tm out/printf.c.eir.tm out/qsort.c.eir.tm out/8cc.c.eir.tm out/elc.c.eir.tm out/dump_ir.c.eir.tm out/eli.c.eir.tm
 include target.mk
 $(OUT.eir.tm.out): out/tm
+
+TARGET := ram
+RUNNER := out/ram
+ifndef FULL
+TEST_FILTER := out/8cc.c.eir.ram out/elc.c.eir.ram out/dump_ir.c.eir.ram out/eli.c.eir.ram
+endif
+include target.mk
+$(OUT.eir.ram.out): out/ram
 
 TARGET := forth
 RUNNER := gforth --dictionary-size 16M

@@ -172,33 +172,28 @@ static const unsigned char charmap[] = {
 int
 strcasecmp(const char *s1, const char *s2)
 {
-  const unsigned char *cm = charmap;
-  const unsigned char *us1 = (const unsigned char *)s1;
-  const unsigned char *us2 = (const unsigned char *)s2;
-
-  while (cm[*us1] == cm[*us2++])
-    if (*us1++ == '\0')
-      return (0);
-  return (cm[*us1] - cm[*--us2]);
+  for (;;) {
+    int c1 = *s1++;
+    int c2 = *s2++;
+    if (c1 >= 'a' && c1 <= 'z') c1 -= 32;
+    if (c2 >= 'a' && c2 <= 'z') c2 -= 32;
+    if (c1 != c2) return c1 - c2;
+    if (c1 == 0) return 0;
+  }
 }
 
-// From Bionic:
 int
 strncasecmp(const char *s1, const char *s2, size_t n)
 {
-  if (n != 0) {
-    const unsigned char *cm = charmap;
-    const unsigned char *us1 = (const unsigned char *)s1;
-    const unsigned char *us2 = (const unsigned char *)s2;
-
-    do {
-      if (cm[*us1] != cm[*us2++])
-        return (cm[*us1] - cm[*--us2]);
-      if (*us1++ == '\0')
-        break;
-    } while (--n != 0);
+  while (n--) {
+    int c1 = *s1++;
+    int c2 = *s2++;
+    if (c1 >= 'a' && c1 <= 'z') c1 -= 32;
+    if (c2 >= 'a' && c2 <= 'z') c2 -= 32;
+    if (c1 != c2) return c1 - c2;
+    if (c1 == 0) return 0;
   }
-  return (0);
+  return 0;
 }
 
 // From Bionic:

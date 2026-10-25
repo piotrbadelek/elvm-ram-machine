@@ -1,6 +1,27 @@
-# ELVM Compiler Infrastructure
+# ELVM for UWr RAM Machine
 
-[![Build Status](https://travis-ci.org/shinh/elvm.svg?branch=master)](http://travis-ci.org/shinh/elvm)
+This repo contains a version of ELVM with a target for the UWr RAM Machine (target/odra.c).
+This software makes it possible to compile C code to run on the RAM machine.
+Due to memory addressation quirks, modifications to the 8cc compiler were made that probably make the rest of the
+backends incompatible. Additionally, instructions such as mul and div were added to take advantage of the RAM machine's
+instruction set and thus, increase performance.
+
+To compile ELVM:
+
+```bash
+make build
+```
+
+Tests for other backends will fail because of the modifications to the 8cc compiler.
+
+To compile a C program to .ram:
+
+```bash
+out/8cc -S -I. -Ilibc -Iout -o intermediate.eir input.c  
+out/elc -ram intermediate.eir > output.ram
+```
+
+## Original ELVM Readme
 
 ELVM is similar to LLVM but dedicated to [Esoteric
 Languages](https://esolangs.org/wiki/Main_Page). This project consists
@@ -117,7 +138,7 @@ backends. The above demo runs ELVM toolchain on JavaScript (thus slow).
 * mul/div/mod are implemented by __builtin_*
 * No bit operations
 * No floating point arithmetic
-* sizeof(char) == sizeof(int) == sizeof(void*) == 1
+* sizeof (char) == sizeof (int) == sizeof (void*) == 1
 * The word-size is backend dependent, but most backend uses 24bit words
 * A single programming counter may contain multiple operations
 
@@ -307,9 +328,10 @@ TODO: Reduce the size of the graph and run 8cc
 
 [Scratch](https://scratch.mit.edu/) is a visual programming language.
 
-Internally, a Scratch program consists of a JSON that represent the program and some resources such as 
+Internally, a Scratch program consists of a JSON that represent the program and some resources such as
 images or sounds.
-They are zip-archived and you can import/export them from project page (Create new one from [here](https://scratch.mit.edu/projects/editor/)).
+They are zip-archived and you can import/export them from project page (Create new one
+from [here](https://scratch.mit.edu/projects/editor/)).
 
 You can use `tools/gen_scratch_sb3.sh` to generate complete project files from output of this backend,
 and `tools/run_scratch.js` to execute programs from command line (npm 'scratch-vm' package is required).
@@ -317,7 +339,9 @@ and `tools/run_scratch.js` to execute programs from command line (npm 'scratch-v
 You can try "fizzbuzz_fast" sample from [here](https://scratch.mit.edu/projects/383294522/).
 
 #### Example (for `test/basic.eir`)
+
 First, generate scratch project.
+
 ```sh
 $ ./out/elc -scratch3 test/basic.eir > basic.scratch3
 $ ./tools/gen_scratch_sb3.sh basic.scratch3
@@ -326,6 +350,7 @@ basic.scratch3.sb3
 ```
 
 ##### Execute it from Web browser
+
 1. Visit [https://scratch.mit.edu/projects/editor](https://scratch.mit.edu/projects/editor).
 2. Click a menu item: "File".
 3. Click "Load from your computer".
@@ -336,8 +361,8 @@ basic.scratch3.sb3
 From the Web editor, to input special characters (LF, EOF, etc.) you have to input them explicitly by following:
 |special character|representation|
 |-----------------|--------------|
-| LF              |`＼n`         |
-| EOF             |`＼0`         |
+| LF |`＼n`         |
+| EOF |`＼0`         |
 | other character with codepoint XXX (decimal) |`＼dXXX`|
 
 Note that: the escape character is `＼` (U+FF3C) not `\`.
@@ -345,12 +370,16 @@ Note that: the escape character is `＼` (U+FF3C) not `\`.
 For normal ASCII characters, you can just put them into the input field.
 
 ##### Execute it from command line
+
 1. First install the npm package ["scratch-vm"](https://github.com/LLK/scratch-vm) under the `tools` directory :
+
 ```sh
 $ cd tools
 $ npm install scratch-vm
 ```
+
 2. Run it with `tools/run_scratch.js`:
+
 ```
 $ echo -n '' | nodejs ./run_scratch.js ../basic.scratch3.sb3
 !!@X
@@ -358,16 +387,22 @@ $ echo -n '' | nodejs ./run_scratch.js ../basic.scratch3.sb3
 
 ### Conway's Game of Life
 
-This backend was contributed by [@woodrush](https://github.com/woodrush/) based on [QFTASM](https://github.com/QuestForTetris/QFT).
+This backend was contributed by [@woodrush](https://github.com/woodrush/) based
+on [QFTASM](https://github.com/QuestForTetris/QFT).
 See [tools/qftasm/README.md](tools/qftasm/README.md) for its details.
 Further implementation details are described in the [Lisp in Life](https://github.com/woodrush/lisp-in-life) project.
 
 ### Binary Lambda Calculus
-This backend was contributed by [@woodrush](https://github.com/woodrush/).
-Implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm) and [lambda-8cc](https://github.com/woodrush/lambda-8cc) repositories.
 
-The output of this backend is an untyped lambda calculus term written in [binary lambda calculus](https://tromp.github.io/cl/Binary_lambda_calculus.html) notation.
-The output program runs on the [IOCCC](https://www.ioccc.org/) 2012 ["Most Functional"](https://www.ioccc.org/2012/tromp/hint.html) interpreter written by [@tromp](https://github.com/tromp).
+This backend was contributed by [@woodrush](https://github.com/woodrush/).
+Implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm)
+and [lambda-8cc](https://github.com/woodrush/lambda-8cc) repositories.
+
+The output of this backend is an untyped lambda calculus term written
+in [binary lambda calculus](https://tromp.github.io/cl/Binary_lambda_calculus.html) notation.
+The output program runs on the [IOCCC](https://www.ioccc.org/)
+2012 ["Most Functional"](https://www.ioccc.org/2012/tromp/hint.html) interpreter written
+by [@tromp](https://github.com/tromp).
 The program runs on the byte-oriented mode which is the default mode.
 
 This backend outputs a sequence of 0/1s written in ASCII.
@@ -375,58 +410,76 @@ This bit stream must be packed into a byte stream before passing it to the inter
 which can be done using tools/packbits.c. Please see tools/runblc.sh for usage details.
 
 This backend is tested with the interpreter [uni](https://github.com/melvinzhang/binary-lambda-calculus),
-a fast implementation of the "Most Functional" interpreter written in C++ by [@melvinzhang](https://github.com/melvinzhang).
+a fast implementation of the "Most Functional" interpreter written in C++
+by [@melvinzhang](https://github.com/melvinzhang).
 This interpreter significantly speeds up the running time of large programs such as 8cc.c.
 tools/runblc.sh automatically clones and builds uni via tools/runblc.sh when the tests are run.
 
 ### Lambda Calculus
+
 This backend was contributed by [@woodrush](https://github.com/woodrush/).
 This backend outputs an untyped lambda calculus term written in plain text, such as `\x.(x x)`.
 
-The I/O model used in this backend is identical to the one used in the [Binary Lambda Calculus backend](#binary-lambda-calculus).
+The I/O model used in this backend is identical to the one used in
+the [Binary Lambda Calculus backend](#binary-lambda-calculus).
 The backend's output program is a lambda calculus term that takes a string as an input and returns a string.
 Here, strings are encoded into lambda calculus terms using Scott encoding and Church encoding,
 so the entire computation only consists of the beta-reduction of lambda calculus terms.
-Further implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm) and [lambda-8cc](https://github.com/woodrush/lambda-8cc) repositories.
+Further implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm)
+and [lambda-8cc](https://github.com/woodrush/lambda-8cc) repositories.
 Note that the backend's output program is assumed to be evaluated using a lazy evaluation strategy.
 
 This backend is tested with the interpreter [uni](https://github.com/melvinzhang/binary-lambda-calculus),
 written by [@melvinzhang](https://github.com/melvinzhang).
-The [blc](https://github.com/tromp/AIT) tool written by [@tromp](https://github.com/tromp) is also used to convert plain text lambdas into binary lambda calculus notation, the format accepted by `uni`.
+The [blc](https://github.com/tromp/AIT) tool written by [@tromp](https://github.com/tromp) is also used to convert plain
+text lambdas into binary lambda calculus notation, the format accepted by `uni`.
 Both tools are automatically cloned and built via tools/runlam.sh when the tests are run.
 
-
 ### Lazy K
-The [Lazy K](https://tromp.github.io/cl/lazy-k.html) backend was contributed by [@woodrush](https://github.com/woodrush/).
-Implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm) and [lambda-8cc](https://github.com/woodrush/lambda-8cc) repositories.
 
-This backend is tested with the Lazy K interpreter [lazyk](https://github.com/irori/lazyk) written by [@irori](https://github.com/irori).
+The [Lazy K](https://tromp.github.io/cl/lazy-k.html) backend was contributed
+by [@woodrush](https://github.com/woodrush/).
+Implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm)
+and [lambda-8cc](https://github.com/woodrush/lambda-8cc) repositories.
+
+This backend is tested with the Lazy K interpreter [lazyk](https://github.com/irori/lazyk) written
+by [@irori](https://github.com/irori).
 Interactive programs require the `-u` option which disables standard output buffering, used as `lazyk -u [input file]`.
 The interpreter is automatically cloned and built via tools/runlazy.sh when the tests are run.
 
 ### Universal Lambda
-The [Universal Lambda](http://www.golfscript.com/lam/) backend was contributed by [@woodrush](https://github.com/woodrush/).
+
+The [Universal Lambda](http://www.golfscript.com/lam/) backend was contributed
+by [@woodrush](https://github.com/woodrush/).
 Implementation details are described in the [LambdaVM](https://github.com/woodrush/lambdavm) repository.
 
-This backend is tested with the Universal Lambda interpreter [clamb](https://github.com/irori/clamb) written by [@irori](https://github.com/irori).
+This backend is tested with the Universal Lambda interpreter [clamb](https://github.com/irori/clamb) written
+by [@irori](https://github.com/irori).
 Interactive programs require the `-u` option which disables standard output buffering, used as `clamb -u [input file]`.
 The interpreter is automatically cloned and built via tools/runulamb.sh when the tests are run.
 
-The output of this backend is an untyped lambda calculus term written in the [binary lambda calculus](https://tromp.github.io/cl/Binary_lambda_calculus.html) notation.
+The output of this backend is an untyped lambda calculus term written in
+the [binary lambda calculus](https://tromp.github.io/cl/Binary_lambda_calculus.html) notation.
 The output program is written as a sequence of 0/1s in ASCII.
 The bit stream must be packed into a byte stream before passing it to the interpreter.
 This can be done using tools/packbits.c. Please see tools/runulamb.sh for usage details.
 
 ### Grass
-The [Grass](http://www.blue.sky.or.jp/grass/) backend was contributed by [@woodrush](https://github.com/woodrush/).
-Implementation details are described in the [GrassVM](https://github.com/woodrush/grassvm) and [LambdaVM](https://github.com/woodrush/lambdavm) repositories.
 
-This backend is tested with the Grass interpreter [grass.ml](https://gist.github.com/woodrush/3d85a6569ef3c85b63bfaf9211881af6), originally written by [@ytomino](https://github.com/ytomino) and modified by [@youz](https://github.com/youz) and [@woodrush](https://github.com/woodrush).
+The [Grass](http://www.blue.sky.or.jp/grass/) backend was contributed by [@woodrush](https://github.com/woodrush/).
+Implementation details are described in the [GrassVM](https://github.com/woodrush/grassvm)
+and [LambdaVM](https://github.com/woodrush/lambdavm) repositories.
+
+This backend is tested with the Grass
+interpreter [grass.ml](https://gist.github.com/woodrush/3d85a6569ef3c85b63bfaf9211881af6), originally written
+by [@ytomino](https://github.com/ytomino) and modified by [@youz](https://github.com/youz)
+and [@woodrush](https://github.com/woodrush).
 The modifications are described in the [GrassVM](https://github.com/woodrush/grassvm) repository.
 
 ### GNU find
 
-The [GNU find](https://www.gnu.org/software/findutils/) backend was contributed by [@ogiekako](https://github.com/ogiekako/).
+The [GNU find](https://www.gnu.org/software/findutils/) backend was contributed
+by [@ogiekako](https://github.com/ogiekako/).
 
 This backend compiles a program into a single shell script, which is nothing but
 a few `find` invocations, each of which in turn `-exec`s only more `find`. All

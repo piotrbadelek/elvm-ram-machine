@@ -41,6 +41,7 @@ void target_ll(Module* module);
 void target_lol(Module* module);
 void target_mcfunction(Module* module);
 void target_oct(Module* module);
+void target_odra(Module* module);
 void target_php(Module* module);
 void target_piet(Module* module);
 void target_pietasm(Module* module);
@@ -115,6 +116,8 @@ static target_func_t get_target_func(const char* ext) {
   if (!strcmp(ext, "lol")) return target_lol;
   if (!strcmp(ext, "mcfunction")) return target_mcfunction;
   if (!strcmp(ext, "oct")) return target_oct;
+  if (!strcmp(ext, "odra")) return target_odra;
+  if (!strcmp(ext, "ram")) return target_odra;
   if (!strcmp(ext, "php")) return target_php;
   if (!strcmp(ext, "piet")) return target_piet;
   if (!strcmp(ext, "pietasm")) return target_pietasm;

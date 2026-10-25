@@ -3,12 +3,12 @@
 
 #include <stdio.h>
 
-#define UINT_MAX 16777215
-#define UINT_MAX_STR "16777215"
+#define UINT_MAX 0xffffffffu
+#define UINT_MAX_STR "4294967295"
 #ifdef __eir__
 # define MOD24(v) v
 #else
-# define MOD24(v) v & UINT_MAX
+# define MOD24(v) ((int)(v))
 #endif
 
 typedef enum {
@@ -25,6 +25,7 @@ typedef enum {
   JEQ = 8, JNE, JLT, JGT, JLE, JGE, JMP,
   // Optional operations follow.
   EQ = 16, NE, LT, GT, LE, GE, DUMP,
+  MUL, DIV, MOD,
   LAST_OP
 } Op;
 
